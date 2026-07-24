@@ -72,28 +72,21 @@ jobs:
         with:
           pattern: results-*
           path: matrix-results
-      - name: Build combined report + per-version results
+      - name: Build combined report
         run: |
           node --experimental-strip-types e2e/aggregate.ts matrix-results > REPORT.md
-          rm -rf results && mkdir results
-          for d in matrix-results/results-*/; do
-            v="${d#matrix-results/results-}"; v="${v%/}"
-            mkdir -p "results/$v" && cp "$d"results/*.json "results/$v/"
-          done
           cat REPORT.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload combined report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: report-combined
-          path: |
-            REPORT.md
-            results/**
+          path: REPORT.md
       - name: Commit combined report
         if: github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add REPORT.md results/
+          git add REPORT.md
           git diff --cached --quiet || git commit -m "docs: update incident matrix report"
           git push

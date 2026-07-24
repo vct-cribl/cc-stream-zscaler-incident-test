@@ -34,14 +34,19 @@ const SOURCETYPES = ["zscalernss-web", "zscalernss-fw", "zscalernss-dns"];
 
 const docker = (...args: string[]): string =>
   execFileSync("docker", args, { encoding: "utf8" });
+// Remove the container if present; silent when it isn't (stdio: "ignore"
+// swallows the "No such container" the daemon prints on the first scenario).
+const rmContainer = (): void => {
+  try {
+    execFileSync("docker", ["rm", "-f", CONTAINER], { stdio: "ignore" });
+  } catch {
+    /* not present */
+  }
+};
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function startCribl(scenarioDir: string, outDir: string): void {
-  try {
-    docker("rm", "-f", CONTAINER);
-  } catch {
-    /* not running */
-  }
+  rmContainer();
   // Config is COPIED in (docker cp) rather than bind-mounted: Cribl persists
   // config via rename(), which fails (EBUSY) over bind-mounted files — UI
   // edits would silently not persist and Cribl's internal git would fight
@@ -340,11 +345,7 @@ export async function runScenario(scenarioDir: string): Promise<ScenarioResult> 
         `container ${CONTAINER} kept alive — Cribl UI: http://localhost:${API_PORT}`,
       );
     } else {
-      try {
-        docker("rm", "-f", CONTAINER);
-      } catch {
-        /* already gone */
-      }
+      rmContainer();
     }
   }
 }

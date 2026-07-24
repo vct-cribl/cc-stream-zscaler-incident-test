@@ -166,7 +166,9 @@ these inputs only pay off with connectivity. Options, in order of preference:
 - `scenarios/<id>/` — `route.yml`, `expect.json`, `packs/` symlinks (fully diffable)
 - `e2e/run.ts` — the entire runner: container lifecycle, pack install, sender,
   counter, reporter
-- `REPORT.md`, `results/` — latest committed evidence
+- `e2e/aggregate.ts` — combines the per-version runs into the `REPORT.md` one-pager
+- `REPORT.md` — latest committed evidence (the cross-version one-pager; raw
+  per-run JSON is attached to each workflow run as artifacts)
 
 ## Contributing
 
