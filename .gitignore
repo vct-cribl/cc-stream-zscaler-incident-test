@@ -1,2 +1,5 @@
 node_modules/
 common/first-login/
+
+# transient per-run scenario results (evidence lives in REPORT.md + run artifacts)
+/results/*.json

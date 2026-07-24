@@ -79,14 +79,19 @@ cd cc-stream-zscaler-incident-test
 ## Usage
 
 **In GitHub** (no setup needed): open the repo's **Actions** tab → **Incident
-Matrix** → **Run workflow**. When it finishes, the run page shows the full
-report, and the refreshed [REPORT.md](REPORT.md) is committed automatically.
+Matrix** → **Run workflow**. CI runs every scenario against six Cribl versions
+(the latest release of each minor line from the incident version up: 4.14.1,
+4.15.1, 4.16.1, 4.17.1, 4.18.2, 4.19.0). When it finishes, the run page shows a
+scenario-by-version table, and the refreshed [REPORT.md](REPORT.md) is committed
+automatically. A `⚠️ diverge` cell means that Cribl version behaves differently
+from the committed expectations for that scenario.
 
-**Locally**:
+**Locally** (runs against `cribl/cribl:latest` unless you pin a version):
 
 ```bash
 node --experimental-strip-types e2e/run.ts scenarios/*   # all tests, ~2 min each
 node --experimental-strip-types e2e/run.ts scenarios/s2-incident-unguarded  # just one
+CRIBL_IMAGE=cribl/cribl:4.14.1 node --experimental-strip-types e2e/run.ts scenarios/*  # pin a version
 ```
 
 ## Inspecting a live Cribl instance
@@ -161,7 +166,9 @@ these inputs only pay off with connectivity. Options, in order of preference:
 - `scenarios/<id>/` — `route.yml`, `expect.json`, `packs/` symlinks (fully diffable)
 - `e2e/run.ts` — the entire runner: container lifecycle, pack install, sender,
   counter, reporter
-- `REPORT.md`, `results/` — latest committed evidence
+- `e2e/aggregate.ts` — combines the per-version runs into the `REPORT.md` one-pager
+- `REPORT.md` — latest committed evidence (the cross-version one-pager; raw
+  per-run JSON is attached to each workflow run as artifacts)
 
 ## Contributing
 
