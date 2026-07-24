@@ -8,7 +8,7 @@ on:
         type: string
         default: ubuntu-latest
       hold_minutes:
-        description: Keep the last scenario's Cribl instance alive this many minutes after the run (only reachable on a self-hosted runner)
+        description: Keep the primary (4.14.1) Cribl instance alive this many minutes after the run (only reachable on a self-hosted runner)
         type: number
         default: 0
   pull_request:
@@ -25,6 +25,12 @@ permissions:
 jobs:
   matrix:
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false          # every version runs; a red leg = that version diverges
+      matrix:
+        # latest release of each minor line from the incident version up.
+        # 4.14.1 is primary (where the incident happened) and listed first.
+        cribl: ['4.14.1', '4.15.1', '4.16.1', '4.17.1', '4.18.2', '4.19.0']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -32,10 +38,12 @@ jobs:
           node-version: 24
       - name: Run all scenarios
         env:
-          KEEP: ${{ (inputs.hold_minutes || 0) > 0 && '1' || '' }}
+          CRIBL_IMAGE: cribl/cribl:${{ matrix.cribl }}
+          # Only the primary leg keeps its instance for inspection; the rest tear down.
+          KEEP: ${{ (inputs.hold_minutes || 0) > 0 && matrix.cribl == '4.14.1' && '1' || '' }}
         run: node --experimental-strip-types e2e/run.ts scenarios/*
       - name: Hold Cribl for inspection
-        if: (inputs.hold_minutes || 0) > 0
+        if: (inputs.hold_minutes || 0) > 0 && matrix.cribl == '4.14.1'
         env:
           HOLD_MINUTES: ${{ inputs.hold_minutes }}
         run: |
@@ -46,11 +54,42 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: results
+          name: results-${{ matrix.cribl }}
           path: |
             results/*.json
             REPORT.md
-      - name: Commit REPORT.md
+
+  report:
+    needs: matrix
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: results-*
+          path: matrix-results
+      - name: Build combined report + per-version results
+        run: |
+          node --experimental-strip-types e2e/aggregate.ts matrix-results > REPORT.md
+          rm -rf results && mkdir results
+          for d in matrix-results/results-*/; do
+            v="${d#matrix-results/results-}"; v="${v%/}"
+            mkdir -p "results/$v" && cp "$d"results/*.json "results/$v/"
+          done
+          cat REPORT.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload combined report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: report-combined
+          path: |
+            REPORT.md
+            results/**
+      - name: Commit combined report
         if: github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"

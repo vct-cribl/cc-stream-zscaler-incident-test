@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "displayName": "Zscaler DEV replica (dev-unguarded)",
   "description": "Dev copy of the Zscaler pack replica; overwrites index/sourcetype at pipeline end. Variant: dev-unguarded",
-  "minLogStreamVersion": "4.16.0"
+  "minLogStreamVersion": "4.14.0"
 }
